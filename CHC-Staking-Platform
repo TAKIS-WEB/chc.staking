@@ -59,8 +59,10 @@ async function unstake() {
 async function claimRewards() {
     const rewardAmount = await tokenContract.calculateReward(await signer.getAddress());
     await tokenContract.withdraw(rewardAmount);
-    await updateRewards();
+    await updateStakedBalance();  // Ενημέρωση του στακιαρισμένου υπολοίπου
+    await updateRewards();        // Ενημέρωση των rewards
 }
+
 
 async function updateStakedBalance() {
     const balance = await tokenContract.balances(await signer.getAddress());
