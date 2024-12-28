@@ -15,64 +15,102 @@
         <button onclick="unstake()">Unstake</button>
         <button onclick="claimRewards()">Claim Rewards</button>
         <p id="stakedBalance">Staked Balance: 0 CHC</p>
-        <p id="rewards">Pending Rewards: 0 CHC</p>
-<p id="rewards">Rewards: 0 CHC</p>
+        <p id="pendingRewards">Pending Rewards: 0 CHC</p>
     </div>
     <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
-const tokenAddress = '0x3e634887906f9b837C376a8b682cBc2F1C5a61EB';  // Διεύθυνση συμβολαίου CHC
-const tokenContractAddress = '0xb78b9aDC14F1069c61b27616268C0aE686961000';
-const tokenABI = [{"inputs":[{"internalType":"address","name":"_chcToken","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"inputs":[],"name":"annualPercentageYield","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"balances","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"calculateReward","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"chcToken","outputs":[{"internalType":"contract IERC20","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"deposit","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"getRewardAmount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getStakedAmount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"lockPeriod","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"minDeposit","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"rewards","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"stakeTime","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"tokenDecimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"}];
+
+const tokenContractAddress = '0xb78b9aDC14F1069c61b27616268C0aE686961000'; // CHC Token Contract
+const tokenABI = [ /* Περιεχόμενο ABI */ ];
 
 let tokenContract;
 let provider;
 let signer;
 
 async function connectWallet() {
-    provider = new ethers.providers.Web3Provider(window.ethereum);
-    await provider.send("eth_requestAccounts", []);
-    signer = provider.getSigner();
-    tokenContract = new ethers.Contract(tokenContractAddress, tokenABI, signer);
-    document.getElementById('stakeInterface').style.display = 'block';
-    updateStakedBalance();
-    updateRewards();
+    try {
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        signer = provider.getSigner();
+        tokenContract = new ethers.Contract(tokenContractAddress, tokenABI, signer);
+
+        document.getElementById('stakeInterface').style.display = 'block';
+        updateStakedBalance();
+        updateRewards();
+    } catch (error) {
+        console.error("Error connecting wallet:", error);
+        alert("Failed to connect wallet!");
+    }
 }
 
 async function stake() {
-    const amount = document.getElementById('stakeAmount').value;
-    const amountInWei = ethers.utils.parseEther(amount);
-    await tokenContract.deposit(amountInWei);
-    await updateStakedBalance();
-    await updateRewards();
+    try {
+        const amount = document.getElementById('stakeAmount').value;
+        if (!amount || amount <= 0) return alert("Please enter a valid amount!");
+
+        const amountInWei = ethers.utils.parseEther(amount);
+        const tx = await tokenContract.deposit(amountInWei);
+        await tx.wait();
+
+        updateStakedBalance();
+        updateRewards();
+    } catch (error) {
+        console.error("Error staking:", error);
+        alert("Failed to stake!");
+    }
 }
 
 async function unstake() {
-    const amount = document.getElementById('stakeAmount').value;
-    const amountInWei = ethers.utils.parseEther(amount);
-    await tokenContract.withdraw(amountInWei);
-    await updateStakedBalance();
-    await updateRewards();
+    try {
+        const amount = document.getElementById('stakeAmount').value;
+        if (!amount || amount <= 0) return alert("Please enter a valid amount!");
+
+        const amountInWei = ethers.utils.parseEther(amount);
+        const tx = await tokenContract.withdraw(amountInWei);
+        await tx.wait();
+
+        updateStakedBalance();
+        updateRewards();
+    } catch (error) {
+        console.error("Error unstaking:", error);
+        alert("Failed to unstake!");
+    }
 }
 
 async function claimRewards() {
-    const rewardAmount = await tokenContract.calculateReward(await signer.getAddress());
-    await tokenContract.withdraw(rewardAmount);
-    await updateStakedBalance();  // Ενημέρωση του στακιαρισμένου υπολοίπου
-    await updateRewards();        // Ενημέρωση των rewards
+    try {
+        const rewardAmount = await tokenContract.calculateReward(await signer.getAddress());
+        const tx = await tokenContract.withdraw(rewardAmount);
+        await tx.wait();
+
+        updateStakedBalance();
+        updateRewards();
+    } catch (error) {
+        console.error("Error claiming rewards:", error);
+        alert("Failed to claim rewards!");
+    }
 }
 
-
 async function updateStakedBalance() {
-    const balance = await tokenContract.balances(await signer.getAddress());
-    document.getElementById('stakedBalance').innerText = `Staked Balance: ${ethers.utils.formatEther(balance)} CHC`;
+    try {
+        const balance = await tokenContract.balances(await signer.getAddress());
+        document.getElementById('stakedBalance').innerText = `Staked Balance: ${ethers.utils.formatEther(balance)} CHC`;
+    } catch (error) {
+        console.error("Error updating staked balance:", error);
+    }
 }
 
 async function updateRewards() {
-    const rewards = await tokenContract.calculateReward(await signer.getAddress());
-    document.getElementById('rewards').innerText = `Pending Rewards: ${ethers.utils.formatEther(rewards)} CHC`;
+    try {
+        const rewards = await tokenContract.calculateReward(await signer.getAddress());
+        document.getElementById('pendingRewards').innerText = `Pending Rewards: ${ethers.utils.formatEther(rewards)} CHC`;
+    } catch (error) {
+        console.error("Error updating rewards:", error);
+    }
 }
+
 body {
     font-family: Arial, sans-serif;
     text-align: center;
@@ -106,3 +144,6 @@ input[type="number"] {
         width: 100%;
     }
 }
+
+    
+    
